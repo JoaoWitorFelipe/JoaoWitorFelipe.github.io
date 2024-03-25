@@ -1,18 +1,8 @@
 ---
 layout: page
-title: About
+title: Sobre mim
 permalink: /about/
 ---
 
-This is the base Jekyll theme. You can find out more info about customizing your Jekyll theme, as well as basic Jekyll usage documentation at [jekyllrb.com](https://jekyllrb.com/)
-
-You can find the source code for Minima at GitHub:
-[jekyll][jekyll-organization] /
-[minima](https://github.com/jekyll/minima)
-
-You can find the source code for Jekyll at GitHub:
-[jekyll][jekyll-organization] /
-[jekyll](https://github.com/jekyll/jekyll)
-
-
-[jekyll-organization]: https://github.com/jekyll
+Meu nome é João Witor Felipe, nasci em 23/02/2001, moro em Tubarão SC. Sou programador desde 2019, me formei em um curso técnico Desenvolvimento de Sistemas em 2018 no IFSC e em 2022 me formei em Ánalise e Desenvolvimento de Sistemas no IFSC também.
+Gosto de estudar sobre código em geral, boas práticas, padrões de projetos, arquiteturas ou ferramentas que possam ser úteis no dia a dia. Atualmente trabalho remotamente para uma empresa vizinha da minha cidade, atuo principalmente no <i>back-end</i> mas gosto de estudar sobre o mundo <i>mobile</i> principalmente com a ferramenta Flutter. E agora, por algum motivo, decidi abrir esse blog no Github para disseminar meu conhecimento que adquiro &#128516;.
