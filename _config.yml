@@ -32,6 +32,10 @@ github_username: JoaoWitorFelipe
 theme: minima
 plugins:
   - jekyll-feed
+  - jekyll-mermaid
+
+mermaid:
+  src: '../../../../../../assets/mermaid.js'
 
 # Exclude from processing.
 # The following items will not be processed, by default.
