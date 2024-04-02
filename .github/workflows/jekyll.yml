@@ -36,8 +36,8 @@ jobs:
     steps:
       - uses: actions/upload-artifact@v4
         with:
-        name: github-pages
-        path: path/to/artifact/world.txt
+          name: github-pages
+          path: ./_sites
       - name: Configure Pages
         uses: actions/configure-pages@v4
       - name: Deploy to GitHub Pages
