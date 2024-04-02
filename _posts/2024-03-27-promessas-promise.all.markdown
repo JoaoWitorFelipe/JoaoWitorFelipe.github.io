@@ -21,20 +21,6 @@ await this.getSuppliers();
 
 A princípio inofensivo, não é mesmo? Porém eu estava usando um banco de dados de teste (remoto, e não tão perfomático quanto de produção) e a tela estava demorando uns segundos para carregar.
 
-Para termos uma visualização melhor desse código na prática, vamos olhar o diagrama abaixo:
-
-{% mermaid %}
-sequenceDiagram
-    front-end->>back-end: getCompanies() 
-    back-end-->>front-end: getCompanies() 
-    front-end->>back-end: getSavedFilters() 
-    back-end-->>front-end: getSavedFilters() 
-    front-end->>back-end: getBanks() 
-    back-end-->>front-end: getBanks() 
-    front-end->>back-end: ... 
-    back-end-->>front-end: ... 
-{% endmermaid %}
-
 Pensando que cada função pode levar 1 segundo de ida e volta, levaríamos 6 segundos no total para carregar uma tela com filtros, então pensei, "ok, esses <em>"awaits"</em> sequenciais vão esperar executar um de cada vez e por isso está demorando o <em>loading</em>", logo pensei na função do "javascripto"
 chamada `Promise.all` para poder paralelizar e otimizar o tempo, então o código ficou isso aqui:
 
@@ -69,18 +55,6 @@ await Promise.all([
 
 Eu preciso esperar que as funções `getCompanies()` e `getSavedFilters()` finalizarem primeiro, porque as outras funções (dentro da `Promise.all`) iriam depender das mudanças 
 de alguns estados (famoso <em>side-effects</em> mas fica para outro <em>post</em> quando tiver vontade) que essas funções de fora executam.
-
-Agora nós temos o seguinte diagrama que representa nosso código, em ordem de execução:
-
-{% mermaid %}
-graph TD;
-    getCompanies(getCompanies)-->|await|getSavedFilters(getSavedFilters)
-    getSavedFilters-->|await|promisseAll
-    promisseAll-->back-end1(getBanks);
-    promisseAll-->back-end2(getPaymentsMethods);
-    promisseAll-->back-end3(getCustomers);
-    promisseAll-->back-end4(getSuppliers);
-{% endmermaid %}
 
 Ou seja, a função `Promise.all` irá invocar as 4 funções ao mesmo tempo para processar, não conseguimos paralelizar todas as funções mas ainda assim conseguimos manter uma boa otimização no tempo de execução do código, entretanto foi necessário validar se havia algum problema de concorrência (eu tinha consciência disso) para evitar novos <em>bugs</em> em produção. 
 Além do mais, paralelizar funções dependendo do que estão executando, podem consumir muito processamento (mas isso fica em outro <em>post</em> quando tiver vontade também rs).
