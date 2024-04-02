@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.5">Jekyll</generator><link href="http://0.0.0.0:4000/feed.xml" rel="self" type="application/atom+xml" /><link href="http://0.0.0.0:4000/" rel="alternate" type="text/html" /><updated>2024-04-02T22:22:03+00:00</updated><id>http://0.0.0.0:4000/feed.xml</id><title type="html">Dumper</title><subtitle>Aqui eu vou falar sobre o que vivencio no trabalho ou sobre discussões com meus amigos, pretendo apenas  falar sobre tecnologias. Pretendo explicar conteúdos de forma mais educativa possível até mesmo para recém programadores ou até mesmo &quot;não-programadores&quot; possam entender.</subtitle><entry><title type="html">Promessas - Promise All</title><link href="http://0.0.0.0:4000/jekyll/update/2024/03/17/promessas-promise.all.html" rel="alternate" type="text/html" title="Promessas - Promise All" /><published>2024-03-17T18:30:00+00:00</published><updated>2024-03-17T18:30:00+00:00</updated><id>http://0.0.0.0:4000/jekyll/update/2024/03/17/promessas-promise.all</id><content type="html" xml:base="http://0.0.0.0:4000/jekyll/update/2024/03/17/promessas-promise.all.html"><![CDATA[<p>Esse é o meu primeiro post, espero que gostem e consigam aprender algo com meu jeito de escrever/expressar 😄.</p>
+
+<p>Uns dias atrás a partir da data que eu comecei a escrever isso aqui, eu recebi uma tarefa para adicionar um novo filtro no <em>front-end</em> e 
+consequentemente também teria que aplicar um <em>“where”</em> no banco de dados para esse novo filtro. Quando me deparo com o seguinte código no <em>front-end</em> (usamos Vue.js):</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js"><span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nx">getCompanies</span><span class="p">();</span>
+<span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nx">getSavedFilters</span><span class="p">();</span>
+<span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nx">getBanks</span><span class="p">();</span>
+<span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nx">getPaymentMethods</span><span class="p">();</span>
+<span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nx">getCustomers</span><span class="p">();</span>
+<span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nx">getSuppliers</span><span class="p">();</span></code></pre></figure>
+
+<p><em>(meramente ilustrativo, tem uma coisa chamada confidencialidade que a gente assina nos contratos com as empresas, baboseira isso ai rs)</em></p>
+
+<p>A princípio inofensivo, não é mesmo? Porém eu estava usando um banco de dados de teste (remoto, e não tão perfomático quanto de produção) e a tela estava demorando uns segundos para carregar.</p>
+
+<p>Para termos uma visualização melhor desse código na prática, vamos olhar o diagrama abaixo:</p>
+
+<script src="../../../../../../assets/mermaid.js"></script>
+<div class="mermaid">
+sequenceDiagram
+    front-end-&gt;&gt;back-end: getCompanies() 
+    back-end--&gt;&gt;front-end: getCompanies() 
+    front-end-&gt;&gt;back-end: getSavedFilters() 
+    back-end--&gt;&gt;front-end: getSavedFilters() 
+    front-end-&gt;&gt;back-end: getBanks() 
+    back-end--&gt;&gt;front-end: getBanks() 
+    front-end-&gt;&gt;back-end: ... 
+    back-end--&gt;&gt;front-end: ... 
+</div>
+
+<p>Pensando que cada função pode levar 1 segundo de ida e volta, levaríamos 6 segundos no total para carregar uma tela com filtros, então pensei, “ok, esses <em>“awaits”</em> sequenciais vão esperar executar um de cada vez e por isso está demorando o <em>loading</em>”, logo pensei na função do “javascripto”
+chamada <code class="language-plaintext highlighter-rouge">Promise.all</code> para poder paralelizar e otimizar o tempo, então o código ficou isso aqui:</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js"><span class="k">await</span> <span class="nb">Promise</span><span class="p">.</span><span class="nx">all</span><span class="p">([</span>
+  <span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nx">getCompanies</span><span class="p">();</span>
+  <span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nx">getSavedFilters</span><span class="p">();</span>
+  <span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nx">getBanks</span><span class="p">();</span>
+  <span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nx">getPaymentMethods</span><span class="p">();</span>
+  <span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nx">getCustomers</span><span class="p">();</span>
+  <span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nx">getSuppliers</span><span class="p">();</span>
+<span class="p">])</span></code></pre></figure>
+
+<p>Show de bola! Coisa de 2min, com uma boa otimização, e de fato, o <em>loading</em> que carregava esses dados abaixou o tempo de segundos para milisegundos, logo pensei “em produção esse <em>loading</em> vai ficar invísivel praticamente”. Mas, adivinha? A vida não é um morango 😠.</p>
+
+<p>Após carregar a tela com os dados, comecei a notar alguns comportamentos estranhos/errados nos filtros, era para preencher automaticamente alguns campos com valores que foram usados anteriormente.
+Porém não carregaram, então fui revisar o que cada função fazia e é aqui que foi o motivo para escrever esse <em>post</em>, apresentar soluções e seus possíveis problemas juntos.</p>
+
+<p>Então, o que aconteceu aqui? Quando usamos qualquer solução que envolve paralelismo, temos que pensar que podem haver problemas de concorrência. O que isso quer dizer? Significa que tinha uma função que deveria executar primeiro, porém o <code class="language-plaintext highlighter-rouge">Promise.all</code> não está nem ai com suas prioridades, ele vai executar tudo junto e resolver cada um no seu tempo, então o código necessitou fazer a seguinte modificação:</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js"><span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nx">getCompanies</span><span class="p">();</span>
+<span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nx">getSavedFilters</span><span class="p">();</span>
+<span class="k">await</span> <span class="nb">Promise</span><span class="p">.</span><span class="nx">all</span><span class="p">([</span>
+  <span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nx">getBanks</span><span class="p">();</span>
+  <span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nx">getPaymentMethods</span><span class="p">();</span>
+  <span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nx">getCustomers</span><span class="p">();</span>
+  <span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nx">getSuppliers</span><span class="p">();</span>
+<span class="p">])</span></code></pre></figure>
+
+<p>Eu preciso esperar que as funções <code class="language-plaintext highlighter-rouge">getCompanies()</code> e <code class="language-plaintext highlighter-rouge">getSavedFilters()</code> finalizarem primeiro, porque as outras funções (dentro da <code class="language-plaintext highlighter-rouge">Promise.all</code>) iriam depender das mudanças 
+de alguns estados (famoso <em>side-effects</em> mas fica para outro <em>post</em> quando tiver vontade) que essas funções de fora executam.</p>
+
+<p>Agora nós temos o seguinte diagrama que representa nosso código, em ordem de execução:</p>
+
+<script src="../../../../../../assets/mermaid.js"></script>
+<div class="mermaid">
+graph TD;
+    getCompanies(getCompanies)--&gt;|await|getSavedFilters(getSavedFilters)
+    getSavedFilters--&gt;|await|promisseAll
+    promisseAll--&gt;back-end1(getBanks);
+    promisseAll--&gt;back-end2(getPaymentsMethods);
+    promisseAll--&gt;back-end3(getCustomers);
+    promisseAll--&gt;back-end4(getSuppliers);
+</div>
+
+<p>Ou seja, a função <code class="language-plaintext highlighter-rouge">Promise.all</code> irá invocar as 4 funções ao mesmo tempo para processar, não conseguimos paralelizar todas as funções mas ainda assim conseguimos manter uma boa otimização no tempo de execução do código, entretanto foi necessário validar se havia algum problema de concorrência (eu tinha consciência disso) para evitar novos <em>bugs</em> em produção. 
+Além do mais, paralelizar funções dependendo do que estão executando, podem consumir muito processamento (mas isso fica em outro <em>post</em> quando tiver vontade também rs).</p>]]></content><author><name></name></author><category term="jekyll" /><category term="update" /><summary type="html"><![CDATA[Esse é o meu primeiro post, espero que gostem e consigam aprender algo com meu jeito de escrever/expressar 😄.]]></summary></entry></feed>
