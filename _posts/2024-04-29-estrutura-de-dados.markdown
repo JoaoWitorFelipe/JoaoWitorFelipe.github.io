@@ -133,3 +133,5 @@ response = requestDataFromThirdAPI()
 if (response.isValueA) then // to do something with string
 else then // to do something with data
 ```
+
+Aqui nós já conseguimos colocar mais contexto para o nosso bloco de código mas ainda está muito fraco isso, vamos trazer um exemplo mais real em TypeScript:
