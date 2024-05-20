@@ -9,7 +9,7 @@ Quero começar esse post com a seguinte frase "A estrutura de dados Either, não
 
 <h1>O que é uma estrutura de dados? E qual sua importância?</h1>
 
-Estrutura de dados, são formas que podemos encapsular dados manipulando em um dado contexto. Bora para os exemplos mais comuns e dessa vez, vou usar a linguagem de programação Kotlin como meu modelo (vai ser útil depois):
+Estrutura de dados, são formas que podemos encapsular dados manipulando em um contexto. Bora para os exemplos mais comuns e dessa vez, vou usar a linguagem de programação Kotlin como meu modelo (vai ser útil depois):
 
 ```kt
 class Person(val name: String, val lastName: String, var age: Int)
@@ -43,9 +43,9 @@ me.getName() // Joao
 me.ofLegalAge() // True
 ```
 
-Agora vamos analisar essa minha nova estrutura, com os dados encapsulados em único lugar, eu consigo criar contextos, por exemplo, recuperar meus dados e principalmente, eu consigo fazer verificações se a pessoa é maior de dados. Eu poderia fazer isso de outra forma? Sim, poderia criar funções avulsas! Porém isso me faz perder contextos do que estou validando ou porquê estou validando.
+Agora vamos analisar essa minha nova estrutura, com os dados encapsulados em único lugar, eu consigo criar contextos, por exemplo, recuperar meus dados e principalmente, eu consigo fazer verificações se a pessoa é maior de dados. Ou validações se possuí nome composto, dentre várias outras.
 
-<h1>Estrutura de dados Either</h1>
+<h1>Agora que entendemos o minímo para conversarmos, vamos falar sobre Either</h1>
 Essa estrutura de dados é útil principalmente para linguagens de programação que faltam algumas ferramentas de tipagem, por exemplo, `union type`. Um exemplo, é o uso de TypeScript:
 
 ```ts
@@ -54,7 +54,7 @@ myUnionTypeFunction(data: string | number): string | number {
 }
 ```
 
-Nesse exemplo, eu tenho uma função que tem um parâmetro que pode ser uma `string` ou `number` e o retorno também, pode ser um ou outro. Isso, por baixo dos panos não é uma estrutura de dados que está controlando, apenas uma união de tipos, que para o compilado que ler isso, vai entender que a função pode retornar um desses dois tipos.
+Nesse exemplo, eu tenho uma função que tem um parâmetro que pode ser uma `string` ou `number` e o retorno também, pode ser um ou outro. Isso, por baixo dos panos não é uma estrutura de dados que está controlando, apenas uma união de tipos, que para o interpretador que ler isso, vai entender que a função pode retornar um desses dois tipos.
 
 Agora vamos para um pseudo-código da estrutura de dados `Either`:
 
@@ -76,31 +76,34 @@ class Either {
 Legal, vamos entender um pouco sobre essa estrutura, podemos passar dois valores no construtor mas não ao mesmo tempo, por que eu iria usar esse tipo de estrutura de dados? Vamos pensar no seguinte pseudo-código:
 
 ```txt
-requestDataFromThirdAPI() {
+requestPersonDataFromThirdAPI() {
     try {
-        data = _request.get(myUrl)
-        return data
+        response = _request.get(myUrl)
+        return response
     } catch {
         return 'Error!'
     }
 }
 
-response = requestDataFromThirdAPI()
+response = requestPersonDataFromThirdAPI()
 ```
 
-Temos uma função que irá requisitar algum dado de uma API de terceiro, porém essa consulta pode ocorrer um erro e agora, nós podemos retornar os dados (uma outra estrutura de dados) ou podemos retornar uma `string`, como podemos contornar isso? Uma forma, seria usar `union type` que algumas linguagens de programação fornencem: 
+Temos uma função que irá requisitar algum dado de uma API de terceiro, porém essa consulta pode ocorrer um erro, nós podemos retornar a resposta (uma estrutura de dados) ou podemos retornar uma `string`, como podemos contornar isso? Uma forma, seria usar `union type` que algumas linguagens de programação fornencem: 
 
 ```txt
-requestDataFromThirdAPI() Data OR string {
+aliasType Person = { data: { name: 'Joao', lastName: 'Felipe', age: 23 } }
+aliasType Error = string
+
+requestPersonDataFromThirdAPI() Response OR Error {
     try {
-        data = _request.get(myUrl)
-        return data
+        response = _request.get(myUrl)
+        return response
     } catch {
         return 'Error!'
     }
 }
 
-response = requestDataFromThirdAPI()
+response = requestPersonDataFromThirdAPI()
 
 if (response typeof string) then // to do something with string
 else then // to do something with data
@@ -110,7 +113,7 @@ Qual o problema disso aqui? Bom:
 
   * Validações fracas:
     
-    Estamos checando o tipo do nosso dado para verificar se é string ou se é outro tipo de dado, mas o que isso significa realmente? Nós não temos nenhum contextos, por que não validamos se é um número também? 
+    Estamos checando o tipo do nosso dado para verificar se é string ou se é outro tipo de dado, mas o que isso significa realmente? Nós não temos nenhum contexto, por que não validamos se é um número também? 
 
   * Legibilidade
 
@@ -119,7 +122,7 @@ Qual o problema disso aqui? Bom:
 Agora vamos reescrever esse código utilizando a estrutura de dados `Either`:
 
 ```txt
-requestDataFromThirdAPI() Either {
+requestPersonDataFromThirdAPI() Either {
     try {
         data = _request.get(myUrl)
         return Either(undefined, data)
@@ -128,10 +131,37 @@ requestDataFromThirdAPI() Either {
     }
 }
 
-response = requestDataFromThirdAPI()
+response = requestPersonDataFromThirdAPI()
 
 if (response.isValueA) then // to do something with string
 else then // to do something with data
 ```
 
-Aqui nós já conseguimos colocar mais contexto para o nosso bloco de código mas ainda está muito fraco isso, vamos trazer um exemplo mais real em TypeScript:
+Aqui nós já conseguimos colocar mais contexto para o nosso bloco de código mas ainda está muito fraco isso, vamos trazer um exemplo mais real em Kotlin:
+
+```kt
+fun main() {
+    val result: Either<Person, RequestError> = execute();
+
+    if (result.left()) {
+        // to do something with person data
+    }
+
+    if (result.right()) {
+        // to do something with error
+    }
+}
+
+fun requestPersonDataFromThirdAPI() = Person('Joao', 'Felipe', 23); 
+
+fun execute(): Either<Person, RequestError> {
+    try {
+        val response = requestPersonDataFromThirdAPI()
+        return Either.Left(response)
+    } catch (e: SomeException) {
+        return Either.Right(RequestError('Error when call request person data.'))
+    }
+}
+```
+
+Olha que bacana que ficou! Agora nós podemos conseguimos saber o que a função `execute` irá nos retornar sem nem precisar entrar na função, apenas pela estrutura de dados e tipagem, é possível saber e o mais importante, a estrutura de dados `Either` ela é muito forte principalemente para validações de erros no código para evitarmos as exceções serem lançados por todo nosso código.
