@@ -5,7 +5,7 @@ date:   2024-06-24 18:30:00 +0000
 categories: jekyll update
 ---
 
-Quero contribuir um pouco sobre desenho de arquitetura e sugerir ferramentas que vou descobrindo enquanto escrevo isso que vão ajudar, até então eu estou estudando mais sobre o assunto mas decidi iniciar uma postagem para poder me auxiliar nos estudos.
+Quero contribuir um pouco sobre desenho de arquitetura e sugerir ferramentas que conheço ou vou descobrindo enquanto escrevo isso que vão ajudar, até então eu estou estudando mais sobre o assunto mas decidi iniciar uma postagem para poder me auxiliar nos estudos.
 Vou colocar um desafio para então construir um desenho de arquitetura. O desafio vai ser uma API de transações de dinheiro, nós teremos as seguintes opções:
  - Ter uma conta com o saldo zerado (essa conta pode ser compartilhada com mais de uma pessoa);
  - Depositar dinheiro;
@@ -20,14 +20,17 @@ Problemas encontrados:
 
 <img src="/assets/2024-06-24-api-arch.markdown/initial_arch.png" alt="drawing" width="100%" />
 
-Muitas vezes essa é a nossa aplicação que construímos, apenas um cliente que pode ser outra aplicação ou Postman/Insomnia requisitando nossa API e que bate no banco de dados. E a grosso modo é isso mas vamos começar a levantar alguns problemas, escalabilidade, como podemos resolver isso? 
+Muitas vezes essa é a nossa aplicação que construímos, apenas um cliente que pode ser outra aplicação ou Postman/Insomnia requisitando nossa API e que bate no banco de dados. E a grosso modo é isso mas vamos começar a levantar alguns problemas, escalabilidade, de acordo com a nossa primeira imagem, a nossa API aguenta apenas 100 requisições, como podemos aumentar isso? 
 
-Bom, podemos subir uma segunda aplicação (ou várias outras) e balancear as requisições ([para mais detalhes](https://docs.nginx.com/nginx/admin-guide/load-balancer/http-load-balancer/)) dos usuários com NGINX para usar a API 1 ou 2. Se a API 1 aguenta 100 requisições por vez, agora seremos capazes de suportar até 200 requisições:
+Bom, podemos subir uma segunda aplicação (ou várias outras) e balancear as requisições ([para mais detalhes](https://docs.nginx.com/nginx/admin-guide/load-balancer/http-load-balancer/)) dos clientes com NGINX para usar a API 1 ou 2. Se a API 1 aguenta 100 requisições por vez, agora seremos capazes de suportar até 200 requisições:
 <img src="/assets/2024-06-24-api-arch.markdown/load_balancer.png" alt="drawing" width="100%" />
 
 Agora que conseguimos ter mais acessos simultâneos, vamos supor que temos uma conta com 100 reais e 2 usuários querem sacar os 100 reais, como podemos resolver?
-Temos algumas opções:
- - Versionar a visualização dos dados (ainda necessita do lock pessimista mas dá para evitar).
- - Lock pessimista, ao tentar mexer no banco de dados, nós bloqueamos a linha que contém o saldo de 100 reais e apenas uma operação pode executar por vez;
+Temos algumas opções para essa situação:
+ - Lock otimista, versionar a visualização dos dados (ainda necessita do lock pessimista mas dá para evitar).
+ - Lock pessimista, ao tentar mexer no banco de dados, nós bloqueamos a conta que contém o saldo de 100 reais e apenas uma operação pode executar por vez;
 
-Vamos começar com o lock pessimista que talvez seja o mais comum:
+Vamos começar com o lock pessimista que talvez seja a solução mais comum, rápida e fácil. Um lock pessimista é quando precisamos travar (lock) algum prcesso e não permitir que nenhum outro processo possa interferir no que já está rodando. Por exemplo, os bancos de dados possuem uma funcionalidade chamada `select ... for update` ([para mais detalhes](https://dev.mysql.com/doc/refman/8.4/en/innodb-locking-reads.html)). Essa funcionalidade trava as linhas que foram selecionadas para realizar o `update` no banco de dados, qualquer outro cliente que tentar acessar essas linhas receberá um erro até a transação ser finalizada. Seguindo no gráfico abaixo teríamos um fluxo assim, sendo que o cliente com ID 1 conseguiu acessar o banco de dados primeiro:
+<img src="/assets/2024-06-24-api-arch.markdown/pessimistic_lock.png" alt="drawing" width="100%" />
+
+O lock pessimista resolve o maior problema disso porém é custoso, é pesado fazer isso e deixa a requisição lenta, para aprimorar isso, podemos adicionar um lock otimista na frente utilizando versionamento dos dados, vamos pensar no seguinte fluxo:
