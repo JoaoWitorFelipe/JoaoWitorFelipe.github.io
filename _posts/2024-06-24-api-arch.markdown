@@ -1,44 +1,46 @@
 ---
 layout: post
-title:  "Desenho de arquitetura para uma API"
-date:   2024-06-24 18:30:00 +0000
+title:  "Escalando API de forma simples"
+date:   2024-07-15 18:30:00 +0000
 categories: jekyll update
 ---
 
-Quero contribuir um pouco sobre desenho de arquitetura e sugerir ferramentas que conheço ou vou descobrindo enquanto escrevo isso que vão ajudar, até então eu estou estudando mais sobre o assunto mas decidi iniciar uma postagem para poder me auxiliar nos estudos.
-Vou colocar um desafio para então construir um desenho de arquitetura. O desafio vai ser uma API de transações de dinheiro, nós teremos as seguintes opções:
- - Ter uma conta com o saldo zerado (essa conta pode ser compartilhada com mais de uma pessoa);
- - Depositar dinheiro;
- - Resgatar dinheiro;
- - Transferir dinheiro para outra conta.
+Quero falar sobre escalonamento de API, de uma forma barata, simples, rápida e mencionar algumas ferramentas comuns que oferecem isso. E também no final, quero também levantar as novas dificuldades que vão aparecer após escalonarmos nossa API.
 
-Problemas encontrados:
- - Não permitir saldo negativo (vamos supor que 2 pessoas tentem fazer operações na conta e falte dinheiro pra um ou pra outro);
- - Segurança;
- - Escalabilidade;
- - Monitoramento;
+Começando, quero apresentar uma arquitetura que é comum e que é por onde começamos geralmente nossos projetos.
 
-<img src="/assets/2024-06-24-api-arch.markdown/initial_arch.png" alt="drawing" width="100%" />
+<img src="/assets/2024-06-24-api-arch.markdown/initial_arch.png" width="100%" />
 
-Muitas vezes essa é a nossa aplicação que construímos, apenas um cliente que pode ser outra aplicação ou Postman/Insomnia requisitando nossa API e que bate no banco de dados. E a grosso modo é isso mas vamos começar a levantar alguns problemas, escalabilidade, de acordo com a nossa primeira imagem, a nossa API aguenta apenas 100 requisições, como podemos aumentar isso? 
+Contextualizar cada elemneto dessa imagem:
 
-Bom, podemos subir uma segunda aplicação (ou várias outras) e balancear as requisições ([para mais detalhes](https://docs.nginx.com/nginx/admin-guide/load-balancer/http-load-balancer/)) dos clientes com NGINX para usar a API 1 ou 2. Se a API 1 aguenta 100 requisições por vez, agora seremos capazes de suportar até 200 requisições:
-<img src="/assets/2024-06-24-api-arch.markdown/load_balancer.png" alt="drawing" width="100%" />
+ - Nós temos o "cliente" que pode ser uma aplicação front-end, ferramenta Postman/Insomnia ou algum outro back-end também, ou seja, alguém que vai fazer requisições para nosso back-end;
 
-Agora que conseguimos ter mais acessos simultâneos, vamos supor que temos uma conta com 100 reais e 2 usuários querem sacar os 100 reais, como podemos resolver?
-Temos algumas opções para essa situação:
- - Lock otimista, versionar a visualização dos dados (ainda necessita do lock pessimista mas dá para evitar).
- - Lock pessimista, ao tentar mexer no banco de dados, nós bloqueamos a conta que contém o saldo de 100 reais e apenas uma operação pode executar por vez;
+ - A "API", que será o serviço back-end que vai receber as requisições e processar o que precisa ser feito;
 
-Vamos começar com o lock pessimista que talvez seja a solução mais comum, rápida e fácil. Um lock pessimista é quando precisamos travar (lock) algum prcesso e não permitir que nenhum outro processo possa interferir no que já está rodando. Por exemplo, os bancos de dados possuem uma funcionalidade chamada `select ... for update` ([para mais detalhes](https://dev.mysql.com/doc/refman/8.4/en/innodb-locking-reads.html)). Essa funcionalidade trava as linhas que foram selecionadas para realizar o `update` no banco de dados, qualquer outro cliente que tentar acessar essas linhas receberá um erro até a transação ser finalizada. Seguindo no gráfico abaixo teríamos um fluxo assim, sendo que o cliente com ID 1 conseguiu acessar o banco de dados primeiro:
-<img src="/assets/2024-06-24-api-arch.markdown/pessimistic_lock.png" alt="drawing" width="100%" />
+ - E por fim o "DB", "database" nosso banco de dados, que iremos para fazer uma ler ou salvar dados.
 
-O lock pessimista resolve o maior problema disso porém é custoso, é pesado fazer isso e deixa a requisição lenta, para aprimorar isso, podemos adicionar um lock otimista na frente utilizando versionamento dos dados, vamos pensar no seguinte fluxo:
+A princípio, isso atende diversos requisições para processar mas vamos supor, que a nossa única API consegue processar 100 requisições por vez e as outras requisições acabam levando muito tempo para processar porque precisam esperar que alguma requisição finalize, como podemos resolver isso?
 
-<img src="/assets/2024-06-24-api-arch.markdown/optimistic_lock.png" alt="drawing" width="100%" />
+# Escalando
 
-Ou seja, agora estamos versionando os dados antes deles seram alterados, como podemos ver, temos uma nova coluna chamada versão, para que ela serve? Vamos analisar o fluxo, o cliente com ID 1 consulta os dados e viu que o saldo é 100 reais na versão 1, quando ele tentou sacar, primeiro adicionamos uma validação para confirmar que a versão dos dados que ele está olhando é a mesma que está armazenado e está! Quer dizer que ele pode sacar esse dinheiro, entretanto, logo em seguida, o cliente com o ID 2 foi tentar sacar 100 reais também porém os dados que ele está vendo estão na versão 1 ao invés da versão 2 que já está com o valor zerado. Isso quer dizer que os dados que o cliente 2 está desatualizado e que devemos notificar ele com uma mensagem e com o novo saldo, para que o cliente com ID 2 possa tomar outra decisão.
+Mas, o que é "escalar" uma API? Vamos pensar, se uma aplicação nossa rodando aguenta 100 requisições, se tivermos duas, vamos conseguir aguentar 200 requisições? A grosso modo é isso mesmo! Então nossa arquitetura ficaria algo assim:
 
-Só que agora vêm uma pergunta, pra que fazer tantas validações? Dessa forma, nós conseguimos previnir que locks pessimistas sejam executados o tempo inteiro, tendo uma resposta mais rápida para o cliente. Mesmo com essa solução, ainda será necessário do lock pessimista como um último recurso de proteção mas conseguimos evitar em certas situações.
+<img src="/assets/2024-06-24-api-arch.markdown/load_balancer.png" width="100%" />
 
-E é claro que, se a gente olhar com mais carinho ainda há brechas para que o saldo fique negativo, mas queria mostrar algumas soluções e direcionamento de como devemos nos preocupar com os sistemas que desenvolvemos.
+Opa, agora apareceu mais alguns elementos no nosso desenho, contextualizando: 
+
+ - NGINX, é uma ferramenta para criar um servidor e possuí algumas configurações (vou mencionar mais pra frente);
+  - API 1, meu back-end rodando em uma porta, por exemplo, 3000;
+  - API 2, meu mesmo back-end rodando em uma porta, por exemplo, 3001.
+
+Olha que bacana, agora nós temos a mesma aplicação rodando duas vezes, agora nós podemos dobrarmos a quantidade de chamadas para o nosso serviço de 100 para 200.
+
+Mas e o NGINX, para que ele vai servir nisso? NGINX, tem diversas funcionalidades, segurança, limitar quantidade de requisições, balancear carga entre os serviços, coisas que uma linguagem de programação/framework não fornece, até porque não é o propósito principal dessas ferramentas.
+
+Vamos nos atentar no "balanceamento de carga" NGINX, agora que nós temos 2 aplicações iguais rodando em portas diferente do nosso servidor, abaixo eu tenho uma configuração simples de um projeto que fiz de exemplo do NGINX:
+
+--- Imagem do NGINX lá do meu github ---
+
+Como podemos ver, eu defino que meu servidor vai rodar em uma porta (colocar a porta aqui), e irá balancear entre os meus 2 serviços que estão rodando.
+
+Além do NGINX, nós temos uma ferramenta muito comum também para NodeJS, que é o PM2, o PM2 não é um servidor mas sim um gerenciador de processos. O que isso significa? Quando rodamos um "node index.js", isso é um processo que está rodando em uma porta, ou seja, o PM2 consegue gerenciar esses processos para nós, que chamamos de "cluster", do português, "grupos". O PM2 vai ajudar, a criar grupos de processos para nós, sem nos preocuparmos em como ele gerencia isso, diferente do NGINX, já que se usarmos o NGINX, vamos precisar alguma outra ferramenta que faça a gerência dos nossos processos para escalar.
