@@ -1,11 +1,11 @@
 ---
 layout: post
-title:  "Escalando API de forma simples"
+title:  "Escalando servidor de forma simples"
 date:   2024-07-15 18:30:00 +0000
 categories: jekyll update
 ---
 
-Quero falar sobre escalonamento de API, de uma forma barata, simples, rápida e mencionar algumas ferramentas comuns que oferecem isso. E também no final, quero também levantar as novas dificuldades que vão aparecer após escalonarmos nossa API.
+Quero falar sobre escalonamento de API para dar um caminho inicial por onde começar, de uma forma barata, simples, rápida e mencionar algumas ferramentas comuns que oferecem isso. E também no final, mencioar algumas dificuldades dificuldades que vão aparecer após escalonarmos nossa API.
 
 Começando, quero apresentar uma arquitetura que é comum e que é por onde começamos geralmente nossos projetos.
 
@@ -17,7 +17,7 @@ Contextualizar cada elemneto dessa imagem:
 
  - A "API", que será o serviço back-end que vai receber as requisições e processar o que precisa ser feito;
 
- - E por fim o "DB", "database" nosso banco de dados, que iremos para fazer uma ler ou salvar dados.
+ - E por fim o "DB", "database" nosso banco de dados, que iremos usar para fazer uma leitura ou salvar dados.
 
 A princípio, isso atende diversos requisições para processar mas vamos supor, que a nossa única API consegue processar 100 requisições por vez e as outras requisições acabam levando muito tempo para processar porque precisam esperar que alguma requisição finalize, como podemos resolver isso?
 
@@ -29,18 +29,18 @@ Mas, o que é "escalar" uma API? Vamos pensar, se uma aplicação nossa rodando 
 
 Opa, agora apareceu mais alguns elementos no nosso desenho, contextualizando: 
 
- - NGINX, é uma ferramenta para criar um servidor e possuí algumas configurações (vou mencionar mais pra frente);
+  - NGINX, ferramenta para criar um servidor;
   - API 1, meu back-end rodando em uma porta, por exemplo, 3000;
   - API 2, meu mesmo back-end rodando em uma porta, por exemplo, 3001.
 
 Olha que bacana, agora nós temos a mesma aplicação rodando duas vezes, agora nós podemos dobrarmos a quantidade de chamadas para o nosso serviço de 100 para 200.
 
-Mas e o NGINX, para que ele vai servir nisso? NGINX, tem diversas funcionalidades, segurança, limitar quantidade de requisições, balancear carga entre os serviços, coisas que uma linguagem de programação/framework não fornece, até porque não é o propósito principal dessas ferramentas.
+Mas e o NGINX, para que ele vai servir nisso? NGINX, tem diversas funcionalidades, segurança, limitador de requisições, balanceador de carga entre os serviços, coisas que uma linguagem de programação/framework não fornece, até porque não é o propósito principal dessas ferramentas.
 
-Vamos nos atentar no "balanceamento de carga" NGINX, agora que nós temos 2 aplicações iguais rodando em portas diferente do nosso servidor, abaixo eu tenho uma configuração simples de um projeto que fiz de exemplo do NGINX:
+Vamos nos atentar no "balanceamento de carga", agora que nós temos 2 aplicações iguais rodando em portas diferente do nosso servidor, abaixo eu tenho uma configuração simples de um projeto que fiz de exemplo do NGINX:
 
---- Imagem do NGINX lá do meu github ---
+<img src="/assets/2024-06-24-api-arch.markdown/nginx_config.png" width="100%" />
 
-Como podemos ver, eu defino que meu servidor vai rodar em uma porta (colocar a porta aqui), e irá balancear entre os meus 2 serviços que estão rodando.
+Entendendo melhor a configuração, eu tenho dois processos em NodeJS rodando, um na porta 6001 e outro na porta 6002, eu agrupo esses meus 2 serviços em uma "upstream" chamada backend e mais abaixo, no meu "server" eu estou dizendo o seguinte: "NGINX, quando alguém acessar você, eu quero que você faça o balanceamento de carga, de forma aleatória entre meus 2 processos rodando". Existem outras estratégias de balanceamento, por exemplo, o servidor que responder mais rápido mas se quiser se aprofundar nisso, vai ler por conta própria, <a href="https://docs.nginx.com/nginx/admin-guide/load-balancer/http-load-balancer/" target="_blank">aqui está a referência preguiçoso(a)</a>.
 
-Além do NGINX, nós temos uma ferramenta muito comum também para NodeJS, que é o PM2, o PM2 não é um servidor mas sim um gerenciador de processos. O que isso significa? Quando rodamos um "node index.js", isso é um processo que está rodando em uma porta, ou seja, o PM2 consegue gerenciar esses processos para nós, que chamamos de "cluster", do português, "grupos". O PM2 vai ajudar, a criar grupos de processos para nós, sem nos preocuparmos em como ele gerencia isso, diferente do NGINX, já que se usarmos o NGINX, vamos precisar alguma outra ferramenta que faça a gerência dos nossos processos para escalar.
+E dessa forma, eu consigo escalar minha aplicação, porém <a href="https://github.com/JoaoWitorFelipe/simples_node_nginx_load_balancer" target="_blank">no meu projeto</a> aonde eu desenvolvi esse exemplo, se formos no `package.json` é possível ver que eu preciso rodar manualmente meus 2 serviços, trazendo pra vida real e se eu precisar subir 100 serviços e balancear entre eles? É claro que não é algo viável na mão, uma forma de contornar isso é na configuração do NGINX usar um range de IPs e uma ferramenta como o Kubernetes ou PM2 (não vou falar dessas ferramentas agora para não extender muito o texto) ou alguma outra que combine com o NGINX para escalar a aplicação nesses IPs definidos, assim tendo uma escalabilidade boa e rápida caso tenha uma demanda alta.
