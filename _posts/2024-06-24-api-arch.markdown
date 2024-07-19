@@ -5,9 +5,9 @@ date:   2024-07-15 18:30:00 +0000
 categories: jekyll update
 ---
 
-Quero falar sobre escalonamento de API para dar um caminho inicial por onde começar, de uma forma barata, simples, rápida e mencionar algumas ferramentas comuns que oferecem isso. E também no final, mencioar algumas dificuldades dificuldades que vão aparecer após escalonarmos nossa API.
+Quero falar sobre escalonamento de API para dar um caminho inicial por onde começar, de uma forma barata, simples, rápida e mencionar algumas ferramentas comuns que oferecem isso. E também no final, mencionar algumas dificuldades que vão aparecer após escalonarmos nossa API.
 
-Começando, quero apresentar uma arquitetura que é comum e que é por onde começamos geralmente nossos projetos.
+Começando, quero apresentar uma arquitetura que é comum e que é por onde começamos geralmente nossos projetos:
 
 <img src="/assets/2024-06-24-api-arch.markdown/initial_arch.png" width="100%" />
 
@@ -43,4 +43,14 @@ Vamos nos atentar no "balanceamento de carga", agora que nós temos 2 aplicaçõ
 
 Entendendo melhor a configuração, eu tenho dois processos em NodeJS rodando, um na porta 6001 e outro na porta 6002, eu agrupo esses meus 2 serviços em uma "upstream" chamada backend e mais abaixo, no meu "server" eu estou dizendo o seguinte: "NGINX, quando alguém acessar você, eu quero que você faça o balanceamento de carga, de forma aleatória entre meus 2 processos rodando". Existem outras estratégias de balanceamento, por exemplo, o servidor que responder mais rápido mas se quiser se aprofundar nisso, vai ler por conta própria, <a href="https://docs.nginx.com/nginx/admin-guide/load-balancer/http-load-balancer/" target="_blank">aqui está a referência preguiçoso(a)</a>.
 
-E dessa forma, eu consigo escalar minha aplicação, porém <a href="https://github.com/JoaoWitorFelipe/simples_node_nginx_load_balancer" target="_blank">no meu projeto</a> aonde eu desenvolvi esse exemplo, se formos no `package.json` é possível ver que eu preciso rodar manualmente meus 2 serviços, trazendo pra vida real e se eu precisar subir 100 serviços e balancear entre eles? É claro que não é algo viável na mão, uma forma de contornar isso é na configuração do NGINX usar um range de IPs e uma ferramenta como o Kubernetes ou PM2 (não vou falar dessas ferramentas agora para não extender muito o texto) ou alguma outra que combine com o NGINX para escalar a aplicação nesses IPs definidos, assim tendo uma escalabilidade boa e rápida caso tenha uma demanda alta.
+E dessa forma, eu consigo escalar minha aplicação, porém <a href="https://github.com/JoaoWitorFelipe/simples_node_nginx_load_balancer" target="_blank">no meu projeto</a> aonde eu desenvolvi esse exemplo, se formos no `package.json` é possível ver que eu preciso rodar manualmente meus 2 serviços, trazendo pra vida real e se eu precisar subir 100 serviços e balancear entre eles? É claro que não é algo viável na mão, uma forma de contornar isso é na configuração do NGINX usar um range de IPs e uma ferramenta como o Kubernetes ou PM2 (não vou falar dessas ferramentas agora para não extender muito o texto) ou alguma outra que combine com o NGINX para escalar a aplicação nesses IPs definidos, assim tendo uma escalabilidade boa e rápida caso tenha uma demanda alta. Teríamos algo mais ao menos assim no final: 
+
+
+<img src="/assets/2024-06-24-api-arch.markdown/cluster_arch.png" width="100%" />
+
+Com essas ferramentas, PM2, Kubernetes, conseguimos escalar nossas aplicações automaticamente, por exemplo, critérios muito comuns para fazer escalonamento automático:
+
+ - Muitas requisições;
+ - Aumento no uso de processamento (CPU) ou RAM.
+
+Dessa forma, simples, rápida e barata conseguimos aumentar a perfomance da nossa aplicação, lembrando que com novas soluções, vem novos problemas, nesse último diagrama podemos ver que o nosso banco de dados vai se tornar um gargalo, pois agora ele terá uma demanda maior por conta do escalonamento do nosso servidor mas eu vou deixar isso para um outro post ou não também.
