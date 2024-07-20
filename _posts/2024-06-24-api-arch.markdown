@@ -19,38 +19,41 @@ Contextualizar cada elemneto dessa imagem:
 
  - E por fim o "DB", "database" nosso banco de dados, que iremos usar para fazer uma leitura ou salvar dados.
 
-A princípio, isso atende diversos requisições para processar mas vamos supor, que a nossa única API consegue processar 100 requisições por vez e as outras requisições acabam levando muito tempo para processar porque precisam esperar que alguma requisição finalize, como podemos resolver isso?
+A princípio, isso atende diversas requisições para processar mas vamos supor que o CTO da empresa chegou falando: "João, bem bacana o projeto aguentando 100 requisições simultâneas, porém nós estamos crescendo bastante e precisamos suportar 200 requisições simultaneamente", como podemos resolver isso?
 
 # Escalando
 
-Mas, o que é "escalar" uma API? Vamos pensar, se uma aplicação nossa rodando aguenta 100 requisições, se tivermos duas, vamos conseguir aguentar 200 requisições? A grosso modo é isso mesmo! Então nossa arquitetura ficaria algo assim:
+Mas, o que é "escalar" um projeto? Vamos pensar, se uma aplicação nossa rodando aguenta 100 requisições, se tivermos duas, vamos conseguir aguentar 200 requisições? A grosso modo, é isso mesmo &#128579;! Então nossa arquitetura ficaria algo assim:
 
 <img src="/assets/2024-06-24-api-arch.markdown/load_balancer.png" width="100%" />
 
 Opa, agora apareceu mais alguns elementos no nosso desenho, contextualizando: 
 
-  - NGINX, ferramenta para criar um servidor;
+  - NGINX, ferramenta para criar um servidor HTTP;
   - API 1, meu back-end rodando em uma porta, por exemplo, 3000;
   - API 2, meu mesmo back-end rodando em uma porta, por exemplo, 3001.
 
 Olha que bacana, agora nós temos a mesma aplicação rodando duas vezes, agora nós podemos dobrarmos a quantidade de chamadas para o nosso serviço de 100 para 200.
+Mas e o NGINX, para que ele vai servir nisso? NGINX, é um servidor HTTP e tem diversas funcionalidades como segurança, limitador de requisições, proxy reverso e o principal para nós, o balanceador de carga entre os serviços. Linguagens de programação, como PHP, Ruby, Rust, JavaScript, Java, são capazes de criar um servidor para rodar em uma porta específica porém, somente eles não conseguem escalar por conta própria, ou seja, mesmo eu tendo 2 API rodando, eles não conseguem balancear sozinho entre eles, por isso precisamos de uma ferramenta a parte. 
 
-Mas e o NGINX, para que ele vai servir nisso? NGINX, tem diversas funcionalidades, segurança, limitador de requisições, balanceador de carga entre os serviços, coisas que uma linguagem de programação/framework não fornece, até porque não é o propósito principal dessas ferramentas.
-
-Vamos nos atentar no "balanceamento de carga", agora que nós temos 2 aplicações iguais rodando em portas diferente do nosso servidor, abaixo eu tenho uma configuração simples de um projeto que fiz de exemplo do NGINX:
+Agora que nós temos 2 aplicações iguais rodando em portas diferente no nosso servidor, abaixo eu mostro uma configuração simples de um projeto que fiz de exemplo com NGINX:
 
 <img src="/assets/2024-06-24-api-arch.markdown/nginx_config.png" width="100%" />
 
-Entendendo melhor a configuração, eu tenho dois processos em NodeJS rodando, um na porta 6001 e outro na porta 6002, eu agrupo esses meus 2 serviços em uma "upstream" chamada backend e mais abaixo, no meu "server" eu estou dizendo o seguinte: "NGINX, quando alguém acessar você, eu quero que você faça o balanceamento de carga, de forma aleatória entre meus 2 processos rodando". Existem outras estratégias de balanceamento, por exemplo, o servidor que responder mais rápido mas se quiser se aprofundar nisso, vai ler por conta própria, <a href="https://docs.nginx.com/nginx/admin-guide/load-balancer/http-load-balancer/" target="_blank">aqui está a referência preguiçoso(a)</a>.
+Entendendo melhor a configuração, eu tenho dois processos em NodeJS rodando, um na porta 6001 e outro na porta 6002, eu agrupo esses meus 2 serviços em uma "upstream" chamada backend e mais abaixo, no meu "server" eu estou dizendo o seguinte: "NGINX, quando alguém acessar você, eu quero que você faça o balanceamento de carga e redirecione a requisição para um entre meus 2 processos rodando". Por padrão é utilizado o algoritmo Round Robin para o balanceamento, mas há outras estratégias, se quiser se aprofundar nisso vai ler por conta própria, <a href="https://docs.nginx.com/nginx/admin-guide/load-balancer/http-load-balancer/" target="_blank">aqui está a referência preguiçoso(a)</a>.
 
-E dessa forma, eu consigo escalar minha aplicação, porém <a href="https://github.com/JoaoWitorFelipe/simples_node_nginx_load_balancer" target="_blank">no meu projeto</a> aonde eu desenvolvi esse exemplo, se formos no `package.json` é possível ver que eu preciso rodar manualmente meus 2 serviços, trazendo pra vida real e se eu precisar subir 100 serviços e balancear entre eles? É claro que não é algo viável na mão, uma forma de contornar isso é na configuração do NGINX usar um range de IPs e uma ferramenta como o Kubernetes ou PM2 (não vou falar dessas ferramentas agora para não extender muito o texto) ou alguma outra que combine com o NGINX para escalar a aplicação nesses IPs definidos, assim tendo uma escalabilidade boa e rápida caso tenha uma demanda alta. Teríamos algo mais ao menos assim no final: 
+E dessa forma, eu consigo escalar minha aplicação a nível de requisições, porém <a href="https://github.com/JoaoWitorFelipe/simples_node_nginx_load_balancer" target="_blank">no meu projeto</a> onde eu desenvolvi esse exemplo, se formos no `package.json` é possível ver que eu preciso rodar manualmente meus 2 serviços, trazendo pra vida real e se eu precisar subir 100 serviços e balancear entre eles? É claro que não é algo viável na mão, uma forma de contornar isso é usando ferramentas como <a target="_blank" href="https://kubernetes.io/pt-br/">Kubernetes</a>, <a target="_blank" href="https://pm2.keymetrics.io/">PM2</a> ou alguma outra que combine com o NGINX para escalar a aplicação. Teríamos algo mais ao menos assim no final: 
 
+<img src="/assets/2024-06-24-api-arch.markdown/cluster.png" width="100%" />
 
-<img src="/assets/2024-06-24-api-arch.markdown/cluster_arch.png" width="100%" />
+Com essas ferramentas, conseguimos escalar nossas aplicações automaticamente de forma rápida e também, podemos adicionar critérios comuns para fazer escalonamento automático:
 
-Com essas ferramentas, PM2, Kubernetes, conseguimos escalar nossas aplicações automaticamente, por exemplo, critérios muito comuns para fazer escalonamento automático:
+ - Muitas requisições (300+ requisições, por exemplo);
+ - Aumento no uso de processamento da CPU ou RAM (consumo de CPU > 80% ou consumo de RAM > 6GB, por exemplo).
 
- - Muitas requisições;
- - Aumento no uso de processamento (CPU) ou RAM.
+Dessa forma, simples, rápida e barata ("barato", só agulha na testa mesmo &#128517;) conseguimos aumentar a perfomance da nossa aplicação, lembrando que com novas soluções, vem novos problemas, nesse último diagrama podemos alguns gargalos/problemas que vão surgir:
+ - Banco de dados, agora com novos serviços rodando, vamos ter mais chamadas para o banco de dados, ou seja, mais leitura de dados e mais escritas, para esse tipo de situação, um escalonamento vertical já ajudaria, ou seja, aumentar a capacidade de CPU e RAM do servidor que está o banco de dados;
+ - Processos em segundo plano, vamos supor que temos uma rotina que executa de hora em hora, vamos ter que nos preocupar com problemas de concorrência já que agora podemos ter serviços tentando acessar os mesmos dados no banco de dados para processar;
+ - E aí, que outro gargalo/problema podemos encontrar aqui?
 
-Dessa forma, simples, rápida e barata conseguimos aumentar a perfomance da nossa aplicação, lembrando que com novas soluções, vem novos problemas, nesse último diagrama podemos ver que o nosso banco de dados vai se tornar um gargalo, pois agora ele terá uma demanda maior por conta do escalonamento do nosso servidor mas eu vou deixar isso para um outro post ou não também.
+Mas a grosso modo, esse é um desenho bem padrão de arquitetura para projetos que precisam ter um desempenho maior com mais usuários ativos. E entenda, cada problema precisa das suas próprias soluções para resolver seus problemas específicos. Tenham em mente isso sempre quando forem resolver um problema, apenas copiar e colar o que eu acabei de escrever nem sempre vai resolver tudo &#128516;.
