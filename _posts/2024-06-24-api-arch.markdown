@@ -46,14 +46,15 @@ E dessa forma, eu consigo escalar minha aplicação a nível de requisições, p
 
 <img src="/assets/2024-06-24-api-arch.markdown/cluster.png" width="100%" />
 
-Com essas ferramentas, conseguimos escalar nossas aplicações automaticamente de forma rápida e também, podemos adicionar critérios comuns para fazer escalonamento automático:
+Com essas ferramentas, conseguimos escalar nossas aplicações automaticamente (PM2 e Kubernetes funcionam de formas diferentes, quis mostrar de uma forma mais geral) de forma rápida e também, podemos adicionar critérios comuns para fazer escalonamento automático:
 
  - Muitas requisições (300+ requisições, por exemplo);
  - Aumento no uso de processamento da CPU ou RAM (consumo de CPU > 80% ou consumo de RAM > 6GB, por exemplo).
 
-Dessa forma, simples, rápida e barata ("barato", só agulha na testa mesmo &#128517;) conseguimos aumentar a perfomance da nossa aplicação, lembrando que com novas soluções, vem novos problemas, nesse último diagrama podemos alguns gargalos/problemas que vão surgir:
+Dessa forma, simples, rápida e barata ("barato", só agulha na testa mesmo &#128517;) conseguimos aumentar a perfomance da nossa aplicação, lembrando que com novas soluções, vem novos problemas, nesse último diagrama podemos ver alguns gargalos/problemas que vão surgir:
  - Banco de dados, agora com novos serviços rodando, vamos ter mais chamadas para o banco de dados, ou seja, mais leitura de dados e mais escritas, para esse tipo de situação, um escalonamento vertical já ajudaria, ou seja, aumentar a capacidade de CPU e RAM do servidor que está o banco de dados;
  - Processos em segundo plano, vamos supor que temos uma rotina que executa de hora em hora, vamos ter que nos preocupar com problemas de concorrência já que agora podemos ter serviços tentando acessar os mesmos dados no banco de dados para processar;
+ - Custos, ferramentas como o Kubernetes custam valor (dinheiro mesmo) e tempo para poder configurar (não é tão simples quanto parece no diagrama hahaha);
  - E aí, que outro gargalo/problema podemos encontrar aqui?
 
 Mas a grosso modo, esse é um desenho bem padrão de arquitetura para projetos que precisam ter um desempenho maior com mais usuários ativos. E entenda, cada problema precisa das suas próprias soluções para resolver seus problemas específicos. Tenham em mente isso sempre quando forem resolver um problema, apenas copiar e colar o que eu acabei de escrever nem sempre vai resolver tudo &#128516;.
