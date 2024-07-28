@@ -1,0 +1,33 @@
+---
+layout: post
+title:  "Escalando um banco de dados"
+date:   2024-07-28 15:25:00 +0000
+categories: jekyll update
+---
+
+Esse texto é um complemento da seguinte arquitetura que foi contado na seguinte postagem <a href="/jekyll/update/2024/07/15/api-arch.html" target="_blank">sobre uma introdução a escalonamento de servidor</a>. Recomendo primeiro a ler primeiro o texto antes de iniciar nesse, já que vou usar algumas referências de lá. Então, para a primeira referência, vamos usar a seguinte arquitetura como modelo:
+
+<img src="/assets/2024-07-28-db-arch.markdown/cluster.png" width="100%" />
+
+Para resumir, nós escalonamos um servidor utilizando NGINX e mencionamos 2 ferramentas para escalonar nossa API, Kubernetes para escalonamento horizontal e PM2 para escalonamento vertical.
+Porém eu levantei um problema no fim do texto, que é, o banco de dados. Agora que o nosso serviço vai suportar mais clientes simultâneamente, o nosso banco de dados vai se tornar um gargalo por não suportar a quantidade de processos que vão ser feitos pelos nossos clientes.
+
+<h1>E com isso vêm o, escalonamento (hûr dûr)!</h1>
+
+Há técnicas sobre técnicas que podemos usar para podermos escalar nosso banco de dados, vamos da mais simples para a mais complexa na minha opinião:
+
+ - Organização: Uma coisa extremamente importante que precisamos nos preocupar no banco de dados é em como separar os dados nas tabelas ou coleções ou objetos ou entidades, tanto faz, não ligo para o nome que queira usar. Os dados precisam estar agrupados em lugares que façam sentido, separando em entidades que serão mais lidos ou menos lidos ou mais escritos ou menos escritos. Tendo isso em mente, conseguimos ter um uso melhor do que a ferramenta pode fornecer pra nós em quesitos de desempenho. Este ponto está como primeiro mas saber organizar as entidades de acordo com as regras de negócios do serviço, não é algo muito simples, isso significa que os próximos itens dessa lista serão mais chatinhos ainda.
+
+ - Indexadores: Ferramenta extremamente poderosa que orienta o banco de dados a encontrar os dados de uma forma rápida. O famoso exemplo, se abrimos um livro na página 1 de 500 páginas e precisamos encontrar um tópico específico, levaríamos horas foleando e foleando até encontrar, por isso que existe o sumário, nele terá os tópicos numerados com a página podemos encontrar mais rápido. No banco de dados é isso, porém temos um custo de processamento maior para cada indexador quando inserimos um novo registro, já que vamos precisar informar ao banco de dados que aquele dado que estamos indexando é importante para nós.
+
+ - Escalonamento vertical: Essa é a mais clássica que podemos pensar, a grosso modo, o banco de dados nada mais é que um escritor e um leitor de um arquivo de texto. Ou seja, quanto mais CPUs e memória RAM (quando falamos escalonamento vertical, pensamos em <i>hardware</i>) para executar essas tarefas melhor vai ser o desempenho dos comandos nos arquivos. Ok, após tal palestrinha, na prática, o que podemos fazer no nosso servidor para melhorar:
+    - Uso de SSD ao invés HD nos servidores (hoje dificilmente, até mesmo nos servidores 0800, vão usar um SSD), simples, SSDs leêm e escrevem mais rápidos os arquivos, pesquisem as comparações em vídeos de um computador ligando no HD e outro no SSD e já irão entender o que estou falando;
+    - Aumentar a memória RAM, ajudará no desempenho de cache, evitando processos repetitivos no disco.
+    - Ter mais espaços fisícos no armazenamento e fazer as indexações corretas para os comandos ter um desempenho melhor.
+    
+    Eu vejo escalonamento vertical como uma forma desesperada em melhorar a perfomance de alguma coisa, basicamente é: "Tá lento? Soca de CPU, RAM, SSD e tudo que for possível nessa merd* até criar uma máquina da NASA!" (Veja bem seu esquisito(a), não estou falando mal, só acho engraçado mesmo esse pensamento).
+
+    Para uma imagem de ilustração sobre o que mencionei antes:
+    <img src="/assets/2024-07-28-db-arch.markdown/vertical_scaling.png" width="100%" />
+
+  - Escalonamento horizontal (ou "sharding", nome feio!): Aqui é onde boa parte da minha vida eu precisei me dedicar aos estudos... (coming soon)
